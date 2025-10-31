@@ -114,8 +114,8 @@
         <div class="image-wrapper">
             <link rel="preload" as="image" href="images/Home.jpg" />
 
-            <img id="mainImage" src="images/Thumbnail/Home_Low.webp" data-full="images/Home.jpg" alt="Home" fetchpriority="high"
-                decoding="async" width="3840" height="5830" class="blur-up" />
+            <img id="mainImage" src="images/Thumbnail/Home_Low.webp" data-full="images/Home.jpg" alt="Home"
+                fetchpriority="high" decoding="async" width="3840" height="5830" class="blur-up" />
             <div class="Cutout">
                 <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 3840 5830">
                     <path id="Tower_A" data-link="Tower_A.html" data-name="Tower_A"
@@ -339,7 +339,8 @@
             const INFO = {
                 Tower_A: {
                     title: 'Tower_A',
-                    img: 'images/Thumbnail/Tower_A.jpg',
+                    lowImg: 'images/Thumbnail/Icon/Tower_A.jpg',
+                    img: 'images/Thumbnail/Icon/Tower_A.jpg',
                     link: 'SubPages/Tower_A.html',
                     detailsHTML: `
           <div><strong>Total Units:</strong> 112</div>
@@ -350,7 +351,8 @@
                 },
                 Tower_B: {
                     title: 'Tower_B',
-                    img: 'images/Thumbnail/Tower_B.jpg',
+                    lowImg: 'images/Thumbnail/Icon/Tower_B.jpg',
+                    img: 'images/Thumbnail/Icon/Tower_B.jpg',
                     link: 'SubPages/Tower_B.html',
                     detailsHTML: `
           <div><strong>Total Units:</strong> 219</div>
@@ -368,23 +370,54 @@
                 modalButton.style.pointerEvents = hasLink ? 'auto' : 'none';
                 modalButton.title = hasLink ? '' : 'No page linked';
             }
+            // scoped only to this script (modal image)
+            function swapModalImage(imgEl, highSrc, lowSrc) {
+                if (!imgEl || !highSrc) return;
+
+                // optional low-res (fallback to placeholder if not provided)
+                if (lowSrc) {
+                    imgEl.src = lowSrc;
+                }
+
+                imgEl.classList.remove('is-loaded');   // reset blur state if reused
+                imgEl.classList.add('blur-up');        // ensure blur-up style is applied
+
+                const hi = new Image();
+                hi.decoding = 'async';
+                hi.src = highSrc;
+
+                const done = () => {
+                    imgEl.src = highSrc;
+                    imgEl.classList.add('is-loaded');
+                };
+
+                if (typeof hi.decode === 'function') {
+                    hi.decode().then(done).catch(done);
+                } else {
+                    hi.onload = done;
+                    hi.onerror = done;
+                }
+            }
+
+            // if you have a consistent low-res naming: file.ext -> file_Low.webp
+            function toLowResPath(fullPath) {
+                // tweak to match your actual low-res naming or return null to skip
+                return fullPath.replace(/(\.\w+)$/, '_Low.webp');
+            }
 
             function render(info) {
                 // Title
                 modalTitle.textContent = info.title || '~';
 
-                // Image (optional)
+                // Image (only modal image is affected)
                 if (imgEl && info.img) {
-                    imgEl.style.opacity = 0.3;
-                    const pre = new Image();
-                    pre.src = info.img;
-                    pre.decoding = 'async';
-                    pre.loading = 'lazy';
-                    pre.onload = () => { imgEl.src = info.img; imgEl.alt = info.title; imgEl.style.opacity = 1; };
-                    pre.onerror = () => { imgEl.src = 'images/Thumbnail/placeholder.jpg'; imgEl.alt = 'Preview not available'; imgEl.style.opacity = 1; };
+                    const high = info.img;
+                    const low = toLowResPath(high); // or set to null if you don't keep _Low.webp files
+                    imgEl.alt = info.title;
+                    swapModalImage(imgEl, high, low);
                 }
 
-                // Details (optional)
+                // Details
                 if (detailsEl) {
                     detailsEl.innerHTML = info.detailsHTML || '';
                 }
@@ -396,6 +429,7 @@
                 // Show card
                 infoCard.style.display = 'flex';
             }
+
 
             // 2) Wire up just the two paths
             paths.forEach(path => {
